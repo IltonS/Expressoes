@@ -1,0 +1,60 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{226324D0-2407-4FC0-8E94-7DC0718447EB}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="ExParser\ExParser.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="CalcEx\CalcEx.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="CalcExpression\CalcExpression.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="ExParser">
+        <MSBuild Projects="ExParser\ExParser.dproj"/>
+    </Target>
+    <Target Name="ExParser:Clean">
+        <MSBuild Projects="ExParser\ExParser.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ExParser:Make">
+        <MSBuild Projects="ExParser\ExParser.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="CalcEx">
+        <MSBuild Projects="CalcEx\CalcEx.dproj"/>
+    </Target>
+    <Target Name="CalcEx:Clean">
+        <MSBuild Projects="CalcEx\CalcEx.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="CalcEx:Make">
+        <MSBuild Projects="CalcEx\CalcEx.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="CalcExpression">
+        <MSBuild Projects="CalcExpression\CalcExpression.dproj"/>
+    </Target>
+    <Target Name="CalcExpression:Clean">
+        <MSBuild Projects="CalcExpression\CalcExpression.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="CalcExpression:Make">
+        <MSBuild Projects="CalcExpression\CalcExpression.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="ExParser;CalcEx;CalcExpression"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="ExParser:Clean;CalcEx:Clean;CalcExpression:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="ExParser:Make;CalcEx:Make;CalcExpression:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
