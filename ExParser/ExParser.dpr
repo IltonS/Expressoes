@@ -21,8 +21,15 @@ begin
   Result := 'ExParser.dll diz: Olá Mundo!';
 end;
 
-exports
-  GetHelloMsg;
+function Parse(Ex : ShortString): Double; stdcall;
+begin
+  Writeln('Parâmetro informado: ' + Ex);
+  Writeln('Testando a função Parse retornando Pi...');
+  Result := 3.14;
+end;
 
-//begin
+exports
+  GetHelloMsg,
+  Parse;
+
 end.
