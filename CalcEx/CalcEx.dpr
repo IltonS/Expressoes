@@ -7,11 +7,12 @@ program CalcEx;
 uses
   System.SysUtils;
 
-function GetHelloMsg(): ShortString; stdcall;
-  external 'ExParser.dll' name 'GetHelloMsg';
+function Parse(Ex : ShortString): Double; stdcall;
+  external 'ExParser.dll' name 'Parse';
 
+var
+  ExResult : Double;
 begin
-  Writeln('Vc digitou: ', ParamStr(1));
-  //Writeln('Pressione ENTER para sair...');
-  //Readln;
+    ExResult := Parse(ParamStr(1));
+    Writeln(FloatToStr(ExResult));
 end.
