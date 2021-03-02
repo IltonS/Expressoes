@@ -11,7 +11,7 @@ function GetHelloMsg(): ShortString; stdcall;
   external 'ExParser.dll' name 'GetHelloMsg';
 
 begin
-  Writeln(GetHelloMsg);
-  Writeln('Pressione ENTER para sair...');
-  Readln;
+  Writeln('Vc digitou: ', ParamStr(1));
+  //Writeln('Pressione ENTER para sair...');
+  //Readln;
 end.
