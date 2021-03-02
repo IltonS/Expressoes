@@ -15,4 +15,6 @@ var
 begin
     ExResult := Parse(ParamStr(1));
     Writeln(FloatToStr(ExResult));
+    Writeln('Pressione ENTER para sair...');
+    Readln;
 end.
