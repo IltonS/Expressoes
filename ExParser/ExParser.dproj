@@ -65,7 +65,7 @@
     <PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
         <DCC_RemoteDebug>false</DCC_RemoteDebug>
         <Debugger_HostApplication>C:\Users\Ilton\Documents\Embarcadero\Studio\Projects\Expressoes\ExParser\Win32\Debug\CalcEx.exe</Debugger_HostApplication>
-        <Debugger_RunParams>4,5x+5*(6+2)</Debugger_RunParams>
+        <Debugger_RunParams>4,5+5*(6+2)</Debugger_RunParams>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
