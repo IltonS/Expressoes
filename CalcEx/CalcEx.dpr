@@ -7,14 +7,14 @@ program CalcEx;
 uses
   System.SysUtils;
 
-function Parse(Ex : ShortString): Double; stdcall;
-  external 'ExParser.dll' name 'Parse';
+function Eval(const Ex: ShortString): Double; stdcall;
+  external 'ExEval.dll' name 'Eval';
 
 var
   ExResult : Double;
 begin
-    ExResult := Parse(ParamStr(1));
+    ExResult := Eval(ParamStr(1));
     Writeln(FloatToStr(ExResult));
-    Writeln('Pressione ENTER para sair...');
+    Write('Pressione ENTER para sair...');
     Readln;
 end.

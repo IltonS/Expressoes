@@ -12,6 +12,9 @@
         <Projects Include="CalcExpression\CalcExpression.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="ExEval\ExEval.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -47,14 +50,23 @@
     <Target Name="CalcExpression:Make">
         <MSBuild Projects="CalcExpression\CalcExpression.dproj" Targets="Make"/>
     </Target>
+    <Target Name="ExEval">
+        <MSBuild Projects="ExEval\ExEval.dproj"/>
+    </Target>
+    <Target Name="ExEval:Clean">
+        <MSBuild Projects="ExEval\ExEval.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ExEval:Make">
+        <MSBuild Projects="ExEval\ExEval.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="ExParser;CalcEx;CalcExpression"/>
+        <CallTarget Targets="ExParser;CalcEx;CalcExpression;ExEval"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="ExParser:Clean;CalcEx:Clean;CalcExpression:Clean"/>
+        <CallTarget Targets="ExParser:Clean;CalcEx:Clean;CalcExpression:Clean;ExEval:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="ExParser:Make;CalcEx:Make;CalcExpression:Make"/>
+        <CallTarget Targets="ExParser:Make;CalcEx:Make;CalcExpression:Make;ExEval:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>
