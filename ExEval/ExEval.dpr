@@ -9,16 +9,20 @@ uses
 
 type
   TOperators = set of Char;
+  TNumbers = set of Char;
 
-  TTokenType = (ttOperator,ttUndefined);
+  TTokenType = (ttOperator,ttNumber,ttUndefined);
 
   TToken = record
     TokenType : TTokenType;
     TokenValue : string;
   end;
 
+  EInvalidToken = class(Exception);
+
 const
   Operators : TOperators = ['+','-','*','/','(',')'];
+  Numbers : TNumbers = ['0'..'9',','];
 
 //------------------------------------------------------------------------------
 // Helpers Functions
@@ -33,6 +37,7 @@ function TokenTypeToStr(TokenType : TTokenType) : string;
 begin
   case TokenType of
     ttOperator : Result := 'Operator';
+    ttNumber : Result := 'Number';
     ttUndefined : Result := 'Undefined';
   end;
 end;
@@ -40,19 +45,46 @@ end;
 //------------------------------------------------------------------------------
 // Core Funtions
 //------------------------------------------------------------------------------
-function MakeLexicalAnalysis(const SourceString : string) : TList<TToken>;
+function MakeLexicalAnalysis(const SourceString : string; TokenList : TList<TToken>) : Boolean;
 var
   MyChar : Char;
+  NumbersBuffer : string;
+  IsScanningNumber : Boolean;
 begin
-  Result := TList<TToken>.Create;
+  //Initialize Local Variables:
+  NumbersBuffer := EmptyStr;
+  IsScanningNumber :=  False;
 
   for MyChar in SourceString do
   begin
-    //Scan for Operators:
-    if MyChar in Operators then
-      Result.Add(MakeToken(ttOperator,MyChar));
-  end;
+    if MyChar in Operators then //Scan for Operators:
+    begin
+      if IsScanningNumber then //Check if the previous char was a number
+      begin
+        TokenList.Add(MakeToken(ttNumber,NumbersBuffer)); //Make the number token
+        NumbersBuffer := EmptyStr; //Clear the Numbers Buffer
+      end;
 
+      IsScanningNumber := False;
+
+      TokenList.Add(MakeToken(ttOperator,MyChar)) //Make the operator token
+    end
+    else
+      if MyChar in Numbers then //Scan for Operators:
+      begin
+        IsScanningNumber := True;
+        NumbersBuffer := NumbersBuffer + MyChar //Update the Numbers Buffer
+      end
+      else
+      begin
+        {TODO -oIltonS -cTratamento de Erros : Tratar Token Inválido}
+      end;
+  end; //For
+
+  if IsScanningNumber then //Check if the expression ended with a number
+    TokenList.Add(MakeToken(ttNumber,NumbersBuffer)); //Make the number token
+
+  Result := True;
 end;
 
 procedure Parse(const SourceString : string);
@@ -61,13 +93,15 @@ var
   Token : TToken;
 begin
   TokenList := TList<TToken>.Create;
-  TokenList := MakeLexicalAnalysis(SourceString);
+  MakeLexicalAnalysis(SourceString,TokenList);
 
   for Token in TokenList do
   begin
     Writeln(Token.TokenValue + ' is ' + TokenTypeToStr(Token.TokenType));
   end;
   Writeln;
+
+  TokenList.Free;
 end;
 
 /// <summary>
