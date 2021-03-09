@@ -91,7 +91,7 @@
         <VerInfo_Locale>1033</VerInfo_Locale>
         <Manifest_File>(None)</Manifest_File>
         <Debugger_HostApplication>C:\Users\Ilton\Documents\Embarcadero\Studio\Projects\Expressoes\CalcEx\Win32\Debug\CalcEx.exe</Debugger_HostApplication>
-        <Debugger_RunParams>3+2</Debugger_RunParams>
+        <Debugger_RunParams>4+5*(6+1)</Debugger_RunParams>
     </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">

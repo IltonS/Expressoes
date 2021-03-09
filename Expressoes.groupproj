@@ -3,9 +3,6 @@
         <ProjectGuid>{226324D0-2407-4FC0-8E94-7DC0718447EB}</ProjectGuid>
     </PropertyGroup>
     <ItemGroup>
-        <Projects Include="ExParser\ExParser.dproj">
-            <Dependencies/>
-        </Projects>
         <Projects Include="CalcEx\CalcEx.dproj">
             <Dependencies/>
         </Projects>
@@ -23,15 +20,6 @@
             <Default.Personality/>
         </BorlandProject>
     </ProjectExtensions>
-    <Target Name="ExParser">
-        <MSBuild Projects="ExParser\ExParser.dproj"/>
-    </Target>
-    <Target Name="ExParser:Clean">
-        <MSBuild Projects="ExParser\ExParser.dproj" Targets="Clean"/>
-    </Target>
-    <Target Name="ExParser:Make">
-        <MSBuild Projects="ExParser\ExParser.dproj" Targets="Make"/>
-    </Target>
     <Target Name="CalcEx">
         <MSBuild Projects="CalcEx\CalcEx.dproj"/>
     </Target>
@@ -60,13 +48,13 @@
         <MSBuild Projects="ExEval\ExEval.dproj" Targets="Make"/>
     </Target>
     <Target Name="Build">
-        <CallTarget Targets="ExParser;CalcEx;CalcExpression;ExEval"/>
+        <CallTarget Targets="CalcEx;CalcExpression;ExEval"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="ExParser:Clean;CalcEx:Clean;CalcExpression:Clean;ExEval:Clean"/>
+        <CallTarget Targets="CalcEx:Clean;CalcExpression:Clean;ExEval:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="ExParser:Make;CalcEx:Make;CalcExpression:Make;ExEval:Make"/>
+        <CallTarget Targets="CalcEx:Make;CalcExpression:Make;ExEval:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>
