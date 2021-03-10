@@ -11,17 +11,15 @@ type
   TOperators = set of Char;
   TNumbers = set of Char;
 
-  TTokenType = (ttOperator,ttNumber,ttUndefined);
+  TTokenType = (ttOperator,ttLeftParentheses,ttRightParentheses,ttNumber,ttUndefined);
 
   TToken = record
     TokenType : TTokenType;
     TokenValue : string;
   end;
 
-  EInvalidToken = class(Exception);
-
 const
-  Operators : TOperators = ['+','-','*','/','(',')'];
+  Operators : TOperators = ['+','-','*','/','%'];
   Numbers : TNumbers = ['0'..'9',','];
 
 //------------------------------------------------------------------------------
@@ -37,6 +35,8 @@ function TokenTypeToStr(TokenType : TTokenType) : string;
 begin
   case TokenType of
     ttOperator : Result := 'Operator';
+    ttLeftParentheses : Result := 'Left Parentheses';
+    ttRightParentheses : Result := 'Right Parentheses';
     ttNumber : Result := 'Number';
     ttUndefined : Result := 'Undefined';
   end;
@@ -57,7 +57,7 @@ begin
 
   for MyChar in SourceString do
   begin
-    if MyChar in Operators then //Scan for Operators:
+    if (MyChar in Operators) or (MyChar = '(') or (MyChar = ')') then //Scan for Operators and Parentheses:
     begin
       if IsScanningNumber then //Check if the previous char was a number
       begin
@@ -67,10 +67,16 @@ begin
 
       IsScanningNumber := False;
 
-      TokenList.Add(MakeToken(ttOperator,MyChar)) //Make the operator token
+      {TODO -oIltonS -cTratamento de Erros : Tratar Parenteses inválidos}
+      case MyChar of
+        '(' : TokenList.Add(MakeToken(ttLeftParentheses,MyChar)); //Make the ( token
+        ')' : TokenList.Add(MakeToken(ttRightParentheses,MyChar)); //Make the ) token
+      else
+        TokenList.Add(MakeToken(ttOperator,MyChar)) //Make the operator token
+      end
     end
     else
-      if MyChar in Numbers then //Scan for Operators:
+      if MyChar in Numbers then //Scan for Numbers:
       begin
         IsScanningNumber := True;
         NumbersBuffer := NumbersBuffer + MyChar //Update the Numbers Buffer
