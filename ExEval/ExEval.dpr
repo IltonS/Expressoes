@@ -11,7 +11,7 @@ type
   TOperators = set of Char;
   TNumbers = set of Char;
 
-  TTokenType = (ttOperator,ttLeftParentheses,ttRightParentheses,ttNumber,ttUndefined);
+  TTokenType = (ttOperator,ttLeftParentheses,ttRightParentheses,ttNumber);
 
   TToken = record
     TokenType : TTokenType;
@@ -37,23 +37,28 @@ begin
     ttOperator : Result := 'Operator';
     ttLeftParentheses : Result := 'Left Parentheses';
     ttRightParentheses : Result := 'Right Parentheses';
-    ttNumber : Result := 'Number';
-    ttUndefined : Result := 'Undefined';
-  end;
+    ttNumber : Result := 'Number'
+  end
 end;
 
 //------------------------------------------------------------------------------
 // Core Funtions
 //------------------------------------------------------------------------------
-function MakeLexicalAnalysis(const SourceString : string; TokenList : TList<TToken>) : Boolean;
+function MakeLexicalAnalysis(SourceString : string; TokenList : TList<TToken>) : Boolean;
 var
   MyChar : Char;
   NumbersBuffer : string;
   IsScanningNumber : Boolean;
+  LeftParenthesesCount, RightParenthesesCount : Integer;
 begin
   //Initialize Local Variables:
   NumbersBuffer := EmptyStr;
   IsScanningNumber :=  False;
+  LeftParenthesesCount := 0;
+  RightParenthesesCount := 0;
+
+  {TODO -oIltonS -cFeature : Validar funcionamento do operador %}
+  //SourceString := StringReplace(SourceString,'%','/100',[rfReplaceAll]); //Replace % token for the actual calculation: /100
 
   for MyChar in SourceString do
   begin
@@ -67,13 +72,17 @@ begin
 
       IsScanningNumber := False;
 
-      {TODO -oIltonS -cTratamento de Erros : Tratar Parenteses inválidos}
       case MyChar of
         '(' : TokenList.Add(MakeToken(ttLeftParentheses,MyChar)); //Make the ( token
         ')' : TokenList.Add(MakeToken(ttRightParentheses,MyChar)); //Make the ) token
       else
         TokenList.Add(MakeToken(ttOperator,MyChar)) //Make the operator token
-      end
+      end;
+
+      case MyChar of //Count Parentheses to validate if the expression is valid
+        '(' : Inc(LeftParenthesesCount);
+        ')' : Inc(RightParenthesesCount);
+      end;
     end
     else
       if MyChar in Numbers then //Scan for Numbers:
@@ -82,13 +91,14 @@ begin
         NumbersBuffer := NumbersBuffer + MyChar //Update the Numbers Buffer
       end
       else
-      begin
-        {TODO -oIltonS -cTratamento de Erros : Tratar Token Inválido}
-      end;
+        raise Exception.Create('Token Inválido: ' + QuotedStr(MyChar) + '.');
   end; //For
 
   if IsScanningNumber then //Check if the expression ended with a number
     TokenList.Add(MakeToken(ttNumber,NumbersBuffer)); //Make the number token
+
+  if not (LeftParenthesesCount = RightParenthesesCount) then //validate ´parentheses
+    raise Exception.Create('Uso incorreto de parêntesis');
 
   Result := True;
 end;
@@ -136,8 +146,8 @@ var
 begin
   Expression := string(Ex);
 
-  Writeln(Expression);
-  Writeln;
+  if Expression.IsEmpty then
+    raise Exception.Create('Nenhuma expressão foi informada.');
 
   Parse(Expression);
 
