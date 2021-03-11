@@ -4,6 +4,7 @@ library ExEval;
 
 uses
   System.SysUtils,
+  System.StrUtils,
   System.Classes,
   System.Generics.Collections;
 
@@ -11,7 +12,7 @@ type
   TOperators = set of Char;
   TNumbers = set of Char;
 
-  TTokenType = (ttOperator,ttLeftParentheses,ttRightParentheses,ttNumber);
+  TTokenType = (ttOperator,ttLeftParentheses,ttRightParentheses,ttNumber,ttPercentageNumber);
 
   TToken = record
     TokenType : TTokenType;
@@ -25,8 +26,11 @@ const
 //------------------------------------------------------------------------------
 // Helpers Functions
 //------------------------------------------------------------------------------
-function MakeToken(const TokenType : TTokenType; const TokenValue : string) : TToken;
+function MakeToken(TokenType : TTokenType; const TokenValue : string) : TToken;
 begin
+  if (TokenType = ttNumber) and ( PosEx('%',TokenValue) <> 0 ) then //Check if is a number and if it is a percentage number
+    TokenType := ttPercentageNumber;
+
   Result.TokenType := TokenType;
   Result.TokenValue := TokenValue;
 end;
@@ -37,7 +41,8 @@ begin
     ttOperator : Result := 'Operator';
     ttLeftParentheses : Result := 'Left Parentheses';
     ttRightParentheses : Result := 'Right Parentheses';
-    ttNumber : Result := 'Number'
+    ttNumber : Result := 'Number';
+    ttPercentageNumber : Result := 'Percentage Number';
   end
 end;
 
@@ -57,13 +62,46 @@ begin
   LeftParenthesesCount := 0;
   RightParenthesesCount := 0;
 
-  {TODO -oIltonS -cFeature : Validar funcionamento do operador %}
-  //SourceString := StringReplace(SourceString,'%','/100',[rfReplaceAll]); //Replace % token for the actual calculation: /100
+  //----------------------------------------------------------------------------
+  // Notes on percentage calculation
+  //----------------------------------------------------------------------------
+  {
+    Scenarios:
+
+    Right Percentage
+    [1] x op y% => x * (1 op (y/100)) -> https://stackoverflow.com/questions/18938863/parsing-percent-expressions-with-antlr4
+    [2] x% op y% => (x/100) * (1 op (y/100))
+
+    Left Percentage
+    [3] y% op x => (y/100) op x
+
+    * % is part of the number
+      4 + 3% => 4 3% + => scenario [1]
+
+    * % is operator
+      (2+2)+(3+3)% => 2 2 + 3 3 + % + => 4 3 3 + % + => 4 6 % + => 4 6% + => scenario [1]
+
+      (2+2)%+(3+3)% => 2 2 + % 3 3 + % + => 4 % 3 3 + % + => 4% 3 3 + % + => 4% 6 % + => 4% 6% + => scenario [2]
+
+      (2+2)+(3+3%%)% => 2 2 + 3 3%% + % + => 4 3 3%% + % + => 4 0,0309 % + => 4 0,0309% + => 4,001236 => scenario [1]
+
+      (2+2)%+(3+3) => 2 2 + % 3 3 + + => 4 % 3 3 + + => 4% 3 3 + + => 4% 6 + => scenario [3]
+
+      (2+2)%%+(3+3) => 2 2 + %% 3 3 + + => 4 %% 3 3 + + => 4%% 3 3 + + => 4%% 6 + => scenario [3]
+                    => 2 2 + % % 3 3 + + => 4 % % 3 3 + + => 4% % 3 3 + + => 4%% 3 3 + + => 4%% 6 + => scenario [3]
+
+  }
 
   for MyChar in SourceString do
   begin
     if (MyChar in Operators) or (MyChar = '(') or (MyChar = ')') then //Scan for Operators and Parentheses:
     begin
+      if IsScanningNumber and (MyChar = '%') then //Check for x% numbers
+      begin
+        NumbersBuffer := NumbersBuffer + MyChar; //Update the Numbers Buffer
+        Continue
+      end;
+
       if IsScanningNumber then //Check if the previous char was a number
       begin
         TokenList.Add(MakeToken(ttNumber,NumbersBuffer)); //Make the number token
@@ -97,6 +135,7 @@ begin
   if IsScanningNumber then //Check if the expression ended with a number
     TokenList.Add(MakeToken(ttNumber,NumbersBuffer)); //Make the number token
 
+  {TODO -oIltonS -cTratamento de Exceções : Tratar ex do tipo )3+3(}
   if not (LeftParenthesesCount = RightParenthesesCount) then //validate ´parentheses
     raise Exception.Create('Uso incorreto de parêntesis');
 
@@ -148,6 +187,9 @@ begin
 
   if Expression.IsEmpty then
     raise Exception.Create('Nenhuma expressão foi informada.');
+
+  {TODO -oIltonS -cTratamento de Exceções : A expressão deve começãr com 0 ou (}
+  Expression := '0' + Expression; //Force an expression to begin with 0
 
   Parse(Expression);
 
