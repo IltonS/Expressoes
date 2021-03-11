@@ -9,7 +9,7 @@ uses
   System.Generics.Collections;
 
 type
-  TOperators = set of Char;
+  TSymbols = set of Char;
   TNumbers = set of Char;
 
   TTokenType = (ttOperator,ttLeftParentheses,ttRightParentheses,ttNumber,ttPercentageNumber);
@@ -20,7 +20,7 @@ type
   end;
 
 const
-  Operators : TOperators = ['+','-','*','/','%'];
+  Symbols : TSymbols = ['+','-','*','/','%','(',')'];
   Numbers : TNumbers = ['0'..'9',','];
 
 //------------------------------------------------------------------------------
@@ -57,11 +57,13 @@ var
   LeftParenthesesCount, RightParenthesesCount : Integer;
 begin
   //Initialize Local Variables:
+  Result := False;
   NumbersBuffer := EmptyStr;
   IsScanningNumber :=  False;
   LeftParenthesesCount := 0;
   RightParenthesesCount := 0;
 
+  {$REGION 'Notes on percentage calculation'}
   //----------------------------------------------------------------------------
   // Notes on percentage calculation
   //----------------------------------------------------------------------------
@@ -91,11 +93,20 @@ begin
                     => 2 2 + % % 3 3 + + => 4 % % 3 3 + + => 4% % 3 3 + + => 4%% 3 3 + + => 4%% 6 + => scenario [3]
 
   }
+  {$ENDREGION}
 
   for MyChar in SourceString do
   begin
-    if (MyChar in Operators) or (MyChar = '(') or (MyChar = ')') then //Scan for Operators and Parentheses:
+    if MyChar in Symbols then //Scan for Operators and Parentheses:
     begin
+      case MyChar of //Count Parentheses to validate if the expression is valid
+        '(' : Inc(LeftParenthesesCount);
+        ')' : Inc(RightParenthesesCount);
+      end;
+
+      if RightParenthesesCount > LeftParenthesesCount then //Right parentheses used without a Left parentheses
+        raise Exception.Create('Uso incorreto de parêntesis');
+
       if IsScanningNumber and (MyChar = '%') then //Check for x% numbers
       begin
         NumbersBuffer := NumbersBuffer + MyChar; //Update the Numbers Buffer
@@ -105,21 +116,16 @@ begin
       if IsScanningNumber then //Check if the previous char was a number
       begin
         TokenList.Add(MakeToken(ttNumber,NumbersBuffer)); //Make the number token
-        NumbersBuffer := EmptyStr; //Clear the Numbers Buffer
+        NumbersBuffer := EmptyStr //Clear the Numbers Buffer
       end;
 
       IsScanningNumber := False;
 
       case MyChar of
         '(' : TokenList.Add(MakeToken(ttLeftParentheses,MyChar)); //Make the ( token
-        ')' : TokenList.Add(MakeToken(ttRightParentheses,MyChar)); //Make the ) token
+        ')' : TokenList.Add(MakeToken(ttRightParentheses,MyChar)) //Make the ) token
       else
         TokenList.Add(MakeToken(ttOperator,MyChar)) //Make the operator token
-      end;
-
-      case MyChar of //Count Parentheses to validate if the expression is valid
-        '(' : Inc(LeftParenthesesCount);
-        ')' : Inc(RightParenthesesCount);
       end;
     end
     else
@@ -129,17 +135,16 @@ begin
         NumbersBuffer := NumbersBuffer + MyChar //Update the Numbers Buffer
       end
       else
-        raise Exception.Create('Token Inválido: ' + QuotedStr(MyChar) + '.');
+        raise Exception.Create('Token Inválido: ' + QuotedStr(MyChar) + '.')
   end; //For
+
+  if not (LeftParenthesesCount = RightParenthesesCount) then //validate ´parentheses
+    raise Exception.Create('Uso incorreto de parêntesis');
 
   if IsScanningNumber then //Check if the expression ended with a number
     TokenList.Add(MakeToken(ttNumber,NumbersBuffer)); //Make the number token
 
-  {TODO -oIltonS -cTratamento de Exceções : Tratar ex do tipo )3+3(}
-  if not (LeftParenthesesCount = RightParenthesesCount) then //validate ´parentheses
-    raise Exception.Create('Uso incorreto de parêntesis');
-
-  Result := True;
+  Result := True
 end;
 
 procedure Parse(const SourceString : string);
@@ -148,6 +153,7 @@ var
   Token : TToken;
 begin
   TokenList := TList<TToken>.Create;
+
   MakeLexicalAnalysis(SourceString,TokenList);
 
   for Token in TokenList do
@@ -156,7 +162,7 @@ begin
   end;
   Writeln;
 
-  TokenList.Free;
+  TokenList.Free
 end;
 
 /// <summary>
@@ -188,12 +194,9 @@ begin
   if Expression.IsEmpty then
     raise Exception.Create('Nenhuma expressão foi informada.');
 
-  {TODO -oIltonS -cTratamento de Exceções : A expressão deve começãr com 0 ou (}
-  Expression := '0' + Expression; //Force an expression to begin with 0
-
   Parse(Expression);
 
-  Result := -1;
+  Result := -1
 end;
 
 exports
