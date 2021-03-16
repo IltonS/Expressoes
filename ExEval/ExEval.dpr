@@ -23,6 +23,21 @@ const
   Symbols : TSymbols = ['+','-','*','/','%','(',')'];
   Numbers : TNumbers = ['0'..'9',','];
 
+resourcestring
+  //----------------------------------------------------------------------------
+  // Error Resources Strings
+  //----------------------------------------------------------------------------
+  EmptyString = 'E01 - A Expressão não pode ser vazia.';
+  OperatorAtTheEnd = 'E02 - A expressão não pode terminar com o operador %s.';
+  InvalidToken = 'E03 - %s é um caracter inválido.';
+  InvalidCommaPrecession = 'E04 - A vírgula não pode iniciar um expressão ou ser precedida por ) ou %.';
+  InvalidCommaSuccession = 'E05 - A vírgula deve ser sucedida por um número.';
+  InvalidOperatorPrecession = 'E06 - O operador %s na posição %s deve ser precedido por um número.';
+  InvalidRightParentheses = 'E07 - O parêntesis na posição %s foi fechado incorretamente.';
+  LeftParenthesesMissingOperator = 'E08 - Operador não encontrado antes do parêntesis ( na posição %s.';
+  RightParenthesesMissingOperator = 'E09 - Operador não encontrado após o parêntesis ) na posição %s.';
+  InvalidParenthesesNumber = 'E10 - O número de parêntesis na expressão está incorreto.';
+
 //------------------------------------------------------------------------------
 // Helpers Functions
 //------------------------------------------------------------------------------
@@ -49,19 +64,93 @@ end;
 //------------------------------------------------------------------------------
 // Core Funtions
 //------------------------------------------------------------------------------
+procedure ValidateExpression(const Ex : string);
+var
+  LeftParenthesesCount, RightParenthesesCount, I : Integer;
+begin
+  //Initialize local variables:
+  LeftParenthesesCount := 0;
+  RightParenthesesCount := 0;
+
+  // #1 - Expression can't be empty
+  if Ex.IsEmpty then
+    raise Exception.Create(EmptyString);
+
+  // #2 - Last character can't be +, -, *, /
+  if Ex.Chars[Ex.Length-1] in ['+','-','*','/'] then
+    raise Exception.CreateFmt(OperatorAtTheEnd,[Ex.Chars[Ex.Length-1]]);
+
+  for I := 0 to (Ex.Length-1) do
+  begin
+    // #3 - Character must be a Symbol or a number
+    if (not (Ex.Chars[I] in Symbols)) and (not (Ex.Chars[I] in Numbers)) then
+      raise Exception.CreateFmt(InvalidToken,[Ex.Chars[I]]);
+
+    if Ex.Chars[I] = ',' then
+    begin
+      // #4 - ',' Can't be preceded by ) or %
+      try
+        if Ex.Chars[I-1] in [')','%'] then
+          raise Exception.Create(InvalidCommaPrecession);
+      except
+        raise Exception.Create(InvalidCommaPrecession);
+      end;
+
+      // #5 - ',' Must be suceded by a number
+      try
+        if not (Ex.Chars[I+1] in ['0'..'9']) then
+          raise Exception.Create(InvalidCommaSuccession);
+      except
+        raise Exception.Create(InvalidCommaSuccession);
+      end;
+    end;
+
+
+    // #6 - Characters +, *, /, % must be preceded by a number, ')' or %
+    try
+      if (Ex.Chars[I] in ['+','*','/','%']) and (not (Ex.Chars[I-1] in ['0'..'9',',',')','%']) ) then
+        raise Exception.CreateFmt(InvalidOperatorPrecession,[Ex.Chars[I],IntToStr(I+1)]);
+    except
+      raise Exception.CreateFmt(InvalidOperatorPrecession,[Ex.Chars[I],IntToStr(I+1)]);
+    end;
+
+    // Validates parentheses
+    if Ex.Chars[I] in ['(',')'] then
+    begin
+      case Ex.Chars[I] of //Count Parentheses to validate if the expression is valid
+        '(' : Inc(LeftParenthesesCount);
+        ')' : Inc(RightParenthesesCount);
+      end;
+
+      // #7 - Right parentheses used without a Left parentheses
+      if RightParenthesesCount > LeftParenthesesCount then
+        raise Exception.CreateFmt(InvalidRightParentheses,[IntToStr(I+1)]);
+
+      // #8 - '(' can't be preceded by number, '%' or ')'
+      if (Ex.Chars[I] = '(') and (I>0) and (Ex.Chars[I-1] in ['0'..'9','%',')'] ) then
+        raise Exception.CreateFmt(LeftParenthesesMissingOperator,[IntToStr(I+1)]);
+
+      // #9 - ')' can't be suceded by number
+      if (Ex.Chars[I] = ')') and (I<=Ex.Length-2) and (Ex.Chars[I+1] in ['0'..'9'] ) then
+        raise Exception.CreateFmt(RightParenthesesMissingOperator,[IntToStr(I+1)])
+    end
+  end; //for
+
+  // #10 - The number of '(' and ')' must be the same
+  if LeftParenthesesCount <> RightParenthesesCount then
+    raise Exception.Create(InvalidParenthesesNumber)
+end;
+
 function MakeLexicalAnalysis(SourceString : string; TokenList : TList<TToken>) : Boolean;
 var
   MyChar : Char;
   NumbersBuffer : string;
   IsScanningNumber : Boolean;
-  LeftParenthesesCount, RightParenthesesCount : Integer;
 begin
   //Initialize Local Variables:
   Result := False;
   NumbersBuffer := EmptyStr;
   IsScanningNumber :=  False;
-  LeftParenthesesCount := 0;
-  RightParenthesesCount := 0;
 
   {$REGION 'Notes on percentage calculation'}
   //----------------------------------------------------------------------------
@@ -99,14 +188,6 @@ begin
   begin
     if MyChar in Symbols then //Scan for Operators and Parentheses:
     begin
-      case MyChar of //Count Parentheses to validate if the expression is valid
-        '(' : Inc(LeftParenthesesCount);
-        ')' : Inc(RightParenthesesCount);
-      end;
-
-      if RightParenthesesCount > LeftParenthesesCount then //Right parentheses used without a Left parentheses
-        raise Exception.Create('Uso incorreto de parêntesis');
-
       if IsScanningNumber and (MyChar = '%') then //Check for x% numbers
       begin
         NumbersBuffer := NumbersBuffer + MyChar; //Update the Numbers Buffer
@@ -128,18 +209,12 @@ begin
         TokenList.Add(MakeToken(ttOperator,MyChar)) //Make the operator token
       end;
     end
-    else
-      if MyChar in Numbers then //Scan for Numbers:
-      begin
-        IsScanningNumber := True;
-        NumbersBuffer := NumbersBuffer + MyChar //Update the Numbers Buffer
-      end
-      else
-        raise Exception.Create('Token Inválido: ' + QuotedStr(MyChar) + '.')
+    else //Scan for numbers
+    begin
+      IsScanningNumber := True;
+      NumbersBuffer := NumbersBuffer + MyChar //Update the Numbers Buffer
+    end
   end; //For
-
-  if not (LeftParenthesesCount = RightParenthesesCount) then //validate ´parentheses
-    raise Exception.Create('Uso incorreto de parêntesis');
 
   if IsScanningNumber then //Check if the expression ended with a number
     TokenList.Add(MakeToken(ttNumber,NumbersBuffer)); //Make the number token
@@ -191,8 +266,7 @@ var
 begin
   Expression := string(Ex);
 
-  if Expression.IsEmpty then
-    raise Exception.Create('Nenhuma expressão foi informada.');
+  ValidateExpression(Expression);
 
   Parse(Expression);
 
