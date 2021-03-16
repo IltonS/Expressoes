@@ -25,7 +25,7 @@ const
 
 resourcestring
   //----------------------------------------------------------------------------
-  // Error Resources Strings
+  // Resources Strings para mensagens de erro
   //----------------------------------------------------------------------------
   EmptyString = 'E01 - A Expressão não pode ser vazia.';
   OperatorAtTheEnd = 'E02 - A expressão não pode terminar com o operador %s.';
@@ -39,7 +39,7 @@ resourcestring
   InvalidParenthesesNumber = 'E10 - O número de parêntesis na expressão está incorreto.';
 
 //------------------------------------------------------------------------------
-// Helpers Functions
+// Funções Helpers
 //------------------------------------------------------------------------------
 function MakeToken(TokenType : TTokenType; const TokenValue : string) : TToken;
 begin
@@ -62,33 +62,50 @@ begin
 end;
 
 //------------------------------------------------------------------------------
-// Core Funtions
+// Funções principais
 //------------------------------------------------------------------------------
 procedure ValidateExpression(const Ex : string);
 var
   LeftParenthesesCount, RightParenthesesCount, I : Integer;
 begin
-  //Initialize local variables:
+  {$REGION 'Resumo da gramática aceita para expressões'}
+  {
+    #1 - Expressão não pode ser vazia
+    #2 - Expressão não pode terminar em +, -, *, /
+    #3 - Caracter precisa ser um símbolo ou número:
+         Symbols : TSymbols = ['+','-','*','/','%','(',')'];
+         Numbers : TNumbers = ['0'..'9',','];
+    #4 - Vírgula não pode ser precedida por ) or %
+    #5 - Vírgula precisa ser sucedida por um número
+    #6 - Os caracteres +, *, /, % precisam ser precedidos por um número, ')' or '%'
+    #7 - Parêntesis fechado incorretamente
+    #8 - '(' não pode ser precedio por número, '%' or ')'
+    #9 - ')' não pode ser sucedido por um número
+    #10 - A contagem de parêntesis precisa ser igual
+  }
+  {$ENDREGION}
+
+  //Inicializa variáveis locais
   LeftParenthesesCount := 0;
   RightParenthesesCount := 0;
 
-  // #1 - Expression can't be empty
+  // #1 - Expressão não pode ser vazia
   if Ex.IsEmpty then
     raise Exception.Create(EmptyString);
 
-  // #2 - Last character can't be +, -, *, /
+  // #2 - Expressão não pode terminar em +, -, *, / )
   if Ex.Chars[Ex.Length-1] in ['+','-','*','/'] then
     raise Exception.CreateFmt(OperatorAtTheEnd,[Ex.Chars[Ex.Length-1]]);
 
   for I := 0 to (Ex.Length-1) do
   begin
-    // #3 - Character must be a Symbol or a number
+    // #3 - Caracter precisa ser um símbolo ou número
     if (not (Ex.Chars[I] in Symbols)) and (not (Ex.Chars[I] in Numbers)) then
       raise Exception.CreateFmt(InvalidToken,[Ex.Chars[I]]);
 
     if Ex.Chars[I] = ',' then
     begin
-      // #4 - ',' Can't be preceded by ) or %
+      // #4 - Vírgula não pode ser precedida por ) or %
       try
         if Ex.Chars[I-1] in [')','%'] then
           raise Exception.Create(InvalidCommaPrecession);
@@ -96,7 +113,7 @@ begin
         raise Exception.Create(InvalidCommaPrecession);
       end;
 
-      // #5 - ',' Must be suceded by a number
+      // #5 - Vírgula precisa ser sucedida por um número
       try
         if not (Ex.Chars[I+1] in ['0'..'9']) then
           raise Exception.Create(InvalidCommaSuccession);
@@ -106,7 +123,7 @@ begin
     end;
 
 
-    // #6 - Characters +, *, /, % must be preceded by a number, ')' or %
+    // #6 - Os caracteres +, *, /, % precisam ser precedidos por um número, ')' or '%'
     try
       if (Ex.Chars[I] in ['+','*','/','%']) and (not (Ex.Chars[I-1] in ['0'..'9',',',')','%']) ) then
         raise Exception.CreateFmt(InvalidOperatorPrecession,[Ex.Chars[I],IntToStr(I+1)]);
@@ -114,29 +131,29 @@ begin
       raise Exception.CreateFmt(InvalidOperatorPrecession,[Ex.Chars[I],IntToStr(I+1)]);
     end;
 
-    // Validates parentheses
+    // Validação de parêntesis
     if Ex.Chars[I] in ['(',')'] then
     begin
-      case Ex.Chars[I] of //Count Parentheses to validate if the expression is valid
+      case Ex.Chars[I] of //Contador de parêntesis para validar a expressão
         '(' : Inc(LeftParenthesesCount);
         ')' : Inc(RightParenthesesCount);
       end;
 
-      // #7 - Right parentheses used without a Left parentheses
+      // #7 - Parêntesis fechado incorretamente
       if RightParenthesesCount > LeftParenthesesCount then
         raise Exception.CreateFmt(InvalidRightParentheses,[IntToStr(I+1)]);
 
-      // #8 - '(' can't be preceded by number, '%' or ')'
+      // #8 - '(' não pode ser precedio por número, '%' or ')'
       if (Ex.Chars[I] = '(') and (I>0) and (Ex.Chars[I-1] in ['0'..'9','%',')'] ) then
         raise Exception.CreateFmt(LeftParenthesesMissingOperator,[IntToStr(I+1)]);
 
-      // #9 - ')' can't be suceded by number
+      // #9 - ')' não pode ser sucedido por um número
       if (Ex.Chars[I] = ')') and (I<=Ex.Length-2) and (Ex.Chars[I+1] in ['0'..'9'] ) then
         raise Exception.CreateFmt(RightParenthesesMissingOperator,[IntToStr(I+1)])
     end
   end; //for
 
-  // #10 - The number of '(' and ')' must be the same
+  // #10 - A contagem de parêntesis precisa ser igual
   if LeftParenthesesCount <> RightParenthesesCount then
     raise Exception.Create(InvalidParenthesesNumber)
 end;
@@ -147,77 +164,77 @@ var
   NumbersBuffer : string;
   IsScanningNumber : Boolean;
 begin
-  //Initialize Local Variables:
+  //Inicializa variáveis locais
   Result := False;
   NumbersBuffer := EmptyStr;
   IsScanningNumber :=  False;
 
-  {$REGION 'Notes on percentage calculation'}
+  {$REGION 'Notas sobre calculo de porcentagem'}
   //----------------------------------------------------------------------------
-  // Notes on percentage calculation
+  // Notas sobre calculo de porcentagem
   //----------------------------------------------------------------------------
   {
-    Scenarios:
+    Cenários:
 
-    Right Percentage
+    Número percentual a direita
     [1] x op y% => x * (1 op (y/100)) -> https://stackoverflow.com/questions/18938863/parsing-percent-expressions-with-antlr4
     [2] x% op y% => (x/100) * (1 op (y/100))
 
-    Left Percentage
+    Número percentual a esquerda
     [3] y% op x => (y/100) op x
 
-    * % is part of the number
+    * % é parte do número
       4 + 3% => 4 3% + => scenario [1]
 
-    * % is operator
-      (2+2)+(3+3)% => 2 2 + 3 3 + % + => 4 3 3 + % + => 4 6 % + => 4 6% + => scenario [1]
+    * % é um operador
+      (2+2)+(3+3)% => 2 2 + 3 3 + % + => 4 3 3 + % + => 4 6 % + => 4 6% + => cenário [1]
 
-      (2+2)%+(3+3)% => 2 2 + % 3 3 + % + => 4 % 3 3 + % + => 4% 3 3 + % + => 4% 6 % + => 4% 6% + => scenario [2]
+      (2+2)%+(3+3)% => 2 2 + % 3 3 + % + => 4 % 3 3 + % + => 4% 3 3 + % + => 4% 6 % + => 4% 6% + => cenário [2]
 
-      (2+2)+(3+3%%)% => 2 2 + 3 3%% + % + => 4 3 3%% + % + => 4 0,0309 % + => 4 0,0309% + => 4,001236 => scenario [1]
+      (2+2)+(3+3%%)% => 2 2 + 3 3%% + % + => 4 3 3%% + % + => 4 0,0309 % + => 4 0,0309% + => 4,001236 => cenário [1]
 
-      (2+2)%+(3+3) => 2 2 + % 3 3 + + => 4 % 3 3 + + => 4% 3 3 + + => 4% 6 + => scenario [3]
+      (2+2)%+(3+3) => 2 2 + % 3 3 + + => 4 % 3 3 + + => 4% 3 3 + + => 4% 6 + => cenário [3]
 
-      (2+2)%%+(3+3) => 2 2 + %% 3 3 + + => 4 %% 3 3 + + => 4%% 3 3 + + => 4%% 6 + => scenario [3]
-                    => 2 2 + % % 3 3 + + => 4 % % 3 3 + + => 4% % 3 3 + + => 4%% 3 3 + + => 4%% 6 + => scenario [3]
+      (2+2)%%+(3+3) => 2 2 + %% 3 3 + + => 4 %% 3 3 + + => 4%% 3 3 + + => 4%% 6 + => cenário [3]
+                    => 2 2 + % % 3 3 + + => 4 % % 3 3 + + => 4% % 3 3 + + => 4%% 3 3 + + => 4%% 6 + => cenário [3]
 
   }
   {$ENDREGION}
 
   for MyChar in SourceString do
   begin
-    if MyChar in Symbols then //Scan for Operators and Parentheses:
+    if MyChar in Symbols then //Lê um operador ou parêntesis
     begin
-      if IsScanningNumber and (MyChar = '%') then //Check for x% numbers
+      if IsScanningNumber and (MyChar = '%') then //Busca por números percentuais
       begin
-        NumbersBuffer := NumbersBuffer + MyChar; //Update the Numbers Buffer
+        NumbersBuffer := NumbersBuffer + MyChar; //Atualiza o buffer de números
         Continue
       end;
 
-      if IsScanningNumber then //Check if the previous char was a number
+      if IsScanningNumber then //Verifica se o caracter anterior era um número
       begin
-        TokenList.Add(MakeToken(ttNumber,NumbersBuffer)); //Make the number token
-        NumbersBuffer := EmptyStr //Clear the Numbers Buffer
+        TokenList.Add(MakeToken(ttNumber,NumbersBuffer)); //Cria um token de número
+        NumbersBuffer := EmptyStr //Limpa o buffer de números.
       end;
 
       IsScanningNumber := False;
 
       case MyChar of
-        '(' : TokenList.Add(MakeToken(ttLeftParentheses,MyChar)); //Make the ( token
-        ')' : TokenList.Add(MakeToken(ttRightParentheses,MyChar)) //Make the ) token
+        '(' : TokenList.Add(MakeToken(ttLeftParentheses,MyChar)); //Cria o token (
+        ')' : TokenList.Add(MakeToken(ttRightParentheses,MyChar)) //Cria o token )
       else
-        TokenList.Add(MakeToken(ttOperator,MyChar)) //Make the operator token
+        TokenList.Add(MakeToken(ttOperator,MyChar)) //Cria um token de operador
       end;
     end
-    else //Scan for numbers
+    else //Lê um número
     begin
       IsScanningNumber := True;
-      NumbersBuffer := NumbersBuffer + MyChar //Update the Numbers Buffer
+      NumbersBuffer := NumbersBuffer + MyChar //Atualiza o buffer de números
     end
   end; //For
 
-  if IsScanningNumber then //Check if the expression ended with a number
-    TokenList.Add(MakeToken(ttNumber,NumbersBuffer)); //Make the number token
+  if IsScanningNumber then //Verifica se a expressão terminou com um número
+    TokenList.Add(MakeToken(ttNumber,NumbersBuffer)); //Cria um token de número
 
   Result := True
 end;
@@ -240,14 +257,15 @@ begin
   TokenList.Free
 end;
 
+{$REGION 'Documentação da função Eval'}
 /// <summary>
-///   Main DLL function
+///   Função principal da DLL.
 /// </summary>
 /// <param name="Ex">
-///   Receives a ShortString with a math expression. Eg.: '4+5*(6+1)'
+///   Recebe uma ShortString contendo uma expressão matemática. Ex: '4+5*(6+1)'.
 /// </param>
 /// <returns>
-///   A Double value with the result of the expression
+///   Um Double com o resultado da expressão.
 /// </returns>
 /// <remarks>
 ///   <para>
@@ -256,10 +274,12 @@ end;
 ///     using PChar or ShortString parameters."
 ///   </para>
 ///   <para>
-///     To make use of String Helpers, the ShortString parameter is casted
-///     into a String and stored in a variable named Expression.
+///     Para fazer uso dos String Helpers, O parâmetro do tipo ShortString é convertido
+///     para uma String e armazenado numa variável chamada Expression.
 ///   </para>
 /// </remarks>
+
+{$ENDREGION}
 function Eval(const Ex: ShortString): Double; stdcall;
 var
   Expression : string;
