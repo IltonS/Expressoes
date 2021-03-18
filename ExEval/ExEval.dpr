@@ -29,21 +29,23 @@ resourcestring
   //----------------------------------------------------------------------------
   EmptyString = 'E01 - A Expressão não pode ser vazia.';
   OperatorAtTheEnd = 'E02 - A expressão não pode terminar com o operador %s.';
-  InvalidToken = 'E03 - %s é um caracter inválido.';
-  InvalidCommaPrecession = 'E04 - A vírgula não pode iniciar um expressão ou ser precedida por ) ou %.';
-  InvalidCommaSuccession = 'E05 - A vírgula deve ser sucedida por um número.';
-  InvalidOperatorPrecession = 'E06 - O operador %s na posição %s deve ser precedido por um número.';
-  InvalidRightParentheses = 'E07 - O parêntesis na posição %s foi fechado incorretamente.';
-  LeftParenthesesMissingOperator = 'E08 - Operador não encontrado antes do parêntesis ( na posição %s.';
-  RightParenthesesMissingOperator = 'E09 - Operador não encontrado após o parêntesis ) na posição %s.';
-  InvalidParenthesesNumber = 'E10 - O número de parêntesis na expressão está incorreto.';
+  InvalidMinusOperator = 'E03 - Uso incorreto do operador -.';
+  InvalidToken = 'E04 - %s é um caracter inválido.';
+  InvalidCommaPrecession = 'E05 - A vírgula não pode iniciar um expressão ou ser precedida por ) ou %.';
+  InvalidCommaSuccession = 'E06 - A vírgula deve ser sucedida por um número.';
+  InvalidOperatorPrecession = 'E07 - O operador %s na posição %s deve ser precedido por um número.';
+  InvalidRightParentheses = 'E08 - O parêntesis na posição %s foi fechado incorretamente.';
+  LeftParenthesesMissingOperator = 'E09 - Operador não encontrado antes do parêntesis ( na posição %s.';
+  RightParenthesesMissingOperator = 'E10 - Operador não encontrado após o parêntesis ) na posição %s.';
+  RightParenthesesMissingNumber = 'E11 - Número não encontrado antes do parêntesis ) na posição %s';
+  InvalidParenthesesNumber = 'E12 - O número de parêntesis na expressão está incorreto.';
 
 //------------------------------------------------------------------------------
 // Funções Helpers
 //------------------------------------------------------------------------------
 function MakeToken(TokenType : TTokenType; const TokenValue : string) : TToken;
 begin
-  if (TokenType = ttNumber) and ( PosEx('%',TokenValue) <> 0 ) then //Check if is a number and if it is a percentage number
+  if (TokenType = ttNumber) and ( PosEx('%',TokenValue) <> 0 ) then //Verifica se é um número e se é um número percentual.
     TokenType := ttPercentageNumber;
 
   Result.TokenType := TokenType;
@@ -72,16 +74,18 @@ begin
   {
     #1 - Expressão não pode ser vazia
     #2 - Expressão não pode terminar em +, -, *, /
-    #3 - Caracter precisa ser um símbolo ou número:
+    #3 - Uso incorreto do operador '-'. Ex: ---4
+    #4 - Caracter precisa ser um símbolo ou número:
          Symbols : TSymbols = ['+','-','*','/','%','(',')'];
          Numbers : TNumbers = ['0'..'9',','];
-    #4 - Vírgula não pode ser precedida por ) or %
-    #5 - Vírgula precisa ser sucedida por um número
-    #6 - Os caracteres +, *, /, % precisam ser precedidos por um número, ')' or '%'
-    #7 - Parêntesis fechado incorretamente
-    #8 - '(' não pode ser precedio por número, '%' or ')'
-    #9 - ')' não pode ser sucedido por um número
-    #10 - A contagem de parêntesis precisa ser igual
+    #5 - Vírgula não pode ser precedida por ) or %
+    #6 - Vírgula precisa ser sucedida por um número
+    #7 - Os caracteres +, *, /, % precisam ser precedidos por um número, ')' or '%'
+    #8 - Parêntesis fechado incorretamente
+    #9 - '(' não pode ser precedio por número, '%' or ')'
+    #10 - ')' não pode ser sucedido por um número
+    #11 - ')' não pode ser precedido por um operador
+    #12 - A contagem de parêntesis precisa ser igual
   }
   {$ENDREGION}
 
@@ -97,15 +101,19 @@ begin
   if Ex.Chars[Ex.Length-1] in ['+','-','*','/'] then
     raise Exception.CreateFmt(OperatorAtTheEnd,[Ex.Chars[Ex.Length-1]]);
 
+  // #3 - Uso incorreto do operador '-'. Ex: ---4
+  if PosEx('---',Ex) <> 0 then
+    raise Exception.Create(InvalidMinusOperator);
+
   for I := 0 to (Ex.Length-1) do
   begin
-    // #3 - Caracter precisa ser um símbolo ou número
+    // #4 - Caracter precisa ser um símbolo ou número
     if (not (Ex.Chars[I] in Symbols)) and (not (Ex.Chars[I] in Numbers)) then
       raise Exception.CreateFmt(InvalidToken,[Ex.Chars[I]]);
 
     if Ex.Chars[I] = ',' then
     begin
-      // #4 - Vírgula não pode ser precedida por ) or %
+      // #5 - Vírgula não pode ser precedida por ) or %
       try
         if Ex.Chars[I-1] in [')','%'] then
           raise Exception.Create(InvalidCommaPrecession);
@@ -113,7 +121,7 @@ begin
         raise Exception.Create(InvalidCommaPrecession);
       end;
 
-      // #5 - Vírgula precisa ser sucedida por um número
+      // #6 - Vírgula precisa ser sucedida por um número
       try
         if not (Ex.Chars[I+1] in ['0'..'9']) then
           raise Exception.Create(InvalidCommaSuccession);
@@ -123,7 +131,7 @@ begin
     end;
 
 
-    // #6 - Os caracteres +, *, /, % precisam ser precedidos por um número, ')' or '%'
+    // #7 - Os caracteres +, *, /, % precisam ser precedidos por um número, ')' or '%'
     try
       if (Ex.Chars[I] in ['+','*','/','%']) and (not (Ex.Chars[I-1] in ['0'..'9',',',')','%']) ) then
         raise Exception.CreateFmt(InvalidOperatorPrecession,[Ex.Chars[I],IntToStr(I+1)]);
@@ -139,30 +147,35 @@ begin
         ')' : Inc(RightParenthesesCount);
       end;
 
-      // #7 - Parêntesis fechado incorretamente
+      // #8 - Parêntesis fechado incorretamente
       if RightParenthesesCount > LeftParenthesesCount then
         raise Exception.CreateFmt(InvalidRightParentheses,[IntToStr(I+1)]);
 
-      // #8 - '(' não pode ser precedio por número, '%' or ')'
+      // #9 - '(' não pode ser precedido por número, '%' or ')'
       if (Ex.Chars[I] = '(') and (I>0) and (Ex.Chars[I-1] in ['0'..'9','%',')'] ) then
         raise Exception.CreateFmt(LeftParenthesesMissingOperator,[IntToStr(I+1)]);
 
-      // #9 - ')' não pode ser sucedido por um número
+      // #10 - ')' não pode ser sucedido por um número
       if (Ex.Chars[I] = ')') and (I<=Ex.Length-2) and (Ex.Chars[I+1] in ['0'..'9'] ) then
-        raise Exception.CreateFmt(RightParenthesesMissingOperator,[IntToStr(I+1)])
+        raise Exception.CreateFmt(RightParenthesesMissingOperator,[IntToStr(I+1)]);
+
+      // #11 - ')' não pode ser precedido por um operador
+      if (Ex.Chars[I] = ')') and (Ex.Chars[I-1] in ['+','-','*','/']) then
+        raise Exception.CreateFmt(RightParenthesesMissingNumber,[IntToStr(I+1)]);
+
     end
   end; //for
 
-  // #10 - A contagem de parêntesis precisa ser igual
+  // #12 - A contagem de parêntesis precisa ser igual
   if LeftParenthesesCount <> RightParenthesesCount then
     raise Exception.Create(InvalidParenthesesNumber)
 end;
 
 function MakeLexicalAnalysis(SourceString : string; TokenList : TList<TToken>) : Boolean;
 var
-  MyChar : Char;
   NumbersBuffer : string;
   IsScanningNumber : Boolean;
+  I : Integer;
 begin
   //Inicializa variáveis locais
   Result := False;
@@ -201,13 +214,27 @@ begin
   }
   {$ENDREGION}
 
-  for MyChar in SourceString do
+  for I := 0 to (SourceString.Length-1) do
   begin
-    if MyChar in Symbols then //Lê um operador ou parêntesis
+    if SourceString.Chars[I] in Symbols then //Lê um operador ou parêntesis
     begin
-      if IsScanningNumber and (MyChar = '%') then //Busca por números percentuais
+      if (SourceString.Chars[I] = '-') and (I=0) and (SourceString.Chars[I+1] in Numbers) then //Lê um número negativo no começo da expressão
       begin
-        NumbersBuffer := NumbersBuffer + MyChar; //Atualiza o buffer de números
+        IsScanningNumber := True;
+        NumbersBuffer := NumbersBuffer + SourceString.Chars[I]; //Atualiza o buffer de números
+        Continue
+      end;
+
+      if (SourceString.Chars[I] = '-') and (I>0) and (SourceString.Chars[I-1] in ['+','-','*','/','(']) then //Lê um número negativo
+      begin
+        IsScanningNumber := True;
+        NumbersBuffer := NumbersBuffer + SourceString.Chars[I]; //Atualiza o buffer de números
+        Continue
+      end;
+
+      if IsScanningNumber and (SourceString.Chars[I] = '%') then //Busca por números percentuais
+      begin
+        NumbersBuffer := NumbersBuffer + SourceString.Chars[I]; //Atualiza o buffer de números
         Continue
       end;
 
@@ -219,17 +246,17 @@ begin
 
       IsScanningNumber := False;
 
-      case MyChar of
-        '(' : TokenList.Add(MakeToken(ttLeftParentheses,MyChar)); //Cria o token (
-        ')' : TokenList.Add(MakeToken(ttRightParentheses,MyChar)) //Cria o token )
+      case SourceString.Chars[I] of
+        '(' : TokenList.Add(MakeToken(ttLeftParentheses,SourceString.Chars[I])); //Cria o token (
+        ')' : TokenList.Add(MakeToken(ttRightParentheses,SourceString.Chars[I])) //Cria o token )
       else
-        TokenList.Add(MakeToken(ttOperator,MyChar)) //Cria um token de operador
+        TokenList.Add(MakeToken(ttOperator,SourceString.Chars[I])) //Cria um token de operador
       end;
     end
     else //Lê um número
     begin
       IsScanningNumber := True;
-      NumbersBuffer := NumbersBuffer + MyChar //Atualiza o buffer de números
+      NumbersBuffer := NumbersBuffer + SourceString.Chars[I] //Atualiza o buffer de números
     end
   end; //For
 
